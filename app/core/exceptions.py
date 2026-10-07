@@ -18,6 +18,13 @@ class NotFoundError(AppException):
         super().__init__(message=message, status_code=404)
 
 
+class ConflictError(AppException):
+    """Resource already exists or conflicts with current state."""
+
+    def __init__(self, message: str = "Resource conflict") -> None:
+        super().__init__(message=message, status_code=409)
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppException)
     async def app_exception_handler(

@@ -22,6 +22,32 @@ app = FastAPI(
         "`response_model`, Pydantic `Field`/`Query`/`Path` descriptions, and "
         "endpoint docstrings."
     ),
+    openapi_tags=[
+        {
+            "name": "health",
+            "description": "Liveness probes for orchestrators and load balancers.",
+        },
+        {
+            "name": "categories",
+            "description": "Browse active categories and nested subcategories.",
+        },
+        {
+            "name": "recipes",
+            "description": (
+                "Recipe catalog: filtered listing and CRUD. "
+                "Cover images reference `files` records "
+                "(multipart upload or presign → PUT → confirm)."
+            ),
+        },
+        {
+            "name": "files",
+            "description": (
+                "Object-storage file metadata. Supports multipart upload and "
+                "direct client upload via `/files/presign` + `/files/confirm`. "
+                "Endpoints return metadata and public URLs, not binary streams."
+            ),
+        },
+    ],
     debug=settings.debug,
 )
 

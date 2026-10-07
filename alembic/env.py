@@ -10,6 +10,7 @@ from app.core.config import get_settings
 from app.models.base import Base
 from app.models.category import Category  # noqa: F401
 from app.models.file import File  # noqa: F401
+from app.models.recipe import Recipe  # noqa: F401
 from app.models.subcategory import SubCategory  # noqa: F401
 
 

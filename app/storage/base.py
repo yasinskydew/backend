@@ -1,4 +1,14 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True, slots=True)
+class ObjectHeadResult:
+    """Metadata returned by a successful HEAD on a stored object."""
+
+    size: int
+    etag: str | None
+    content_type: str | None
 
 
 class StorageProvider(ABC):
@@ -21,3 +31,17 @@ class StorageProvider(ABC):
     @abstractmethod
     def build_public_url(self, object_key: str) -> str:
         """Return a publicly accessible URL for the object key."""
+
+    @abstractmethod
+    async def create_presigned_put_url(
+        self,
+        *,
+        object_key: str,
+        content_type: str,
+        expires_in: int,
+    ) -> str:
+        """Return a time-limited PUT URL for direct client upload."""
+
+    @abstractmethod
+    async def head_object(self, *, object_key: str) -> ObjectHeadResult | None:
+        """Return object metadata, or None if the key does not exist."""

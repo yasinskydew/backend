@@ -15,6 +15,11 @@ class FileRepository:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_by_object_key(self, object_key: str) -> File | None:
+        stmt = select(File).where(File.object_key == object_key)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def create(
         self,
         *,

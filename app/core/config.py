@@ -50,6 +50,12 @@ class Settings(BaseSettings):
         default=True,
         alias="STORAGE_FORCE_PATH_STYLE",
     )
+    storage_presign_expire_seconds: int = Field(
+        default=900,
+        ge=60,
+        le=86_400,
+        alias="STORAGE_PRESIGN_EXPIRE_SECONDS",
+    )
 
     @field_validator("cors_origins", mode="before")
     @classmethod

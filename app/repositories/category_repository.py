@@ -40,6 +40,24 @@ class CategoryRepository:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_subcategory_by_id(self, subcategory_id: UUID) -> SubCategory | None:
+        stmt = select(SubCategory).where(SubCategory.id == subcategory_id)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_subcategory_by_slug(
+        self,
+        *,
+        category_id: UUID,
+        slug: str,
+    ) -> SubCategory | None:
+        stmt = select(SubCategory).where(
+            SubCategory.category_id == category_id,
+            SubCategory.slug == slug,
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def get_by_slug_any(self, slug: str) -> Category | None:
         """Fetch category by slug regardless of is_active (for seeding)."""
         stmt = (

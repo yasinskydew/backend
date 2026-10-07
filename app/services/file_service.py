@@ -7,11 +7,16 @@ from pathlib import PurePosixPath
 from fastapi import UploadFile
 
 from app.core.config import Settings
-from app.core.exceptions import AppException, NotFoundError
+from app.core.exceptions import AppException, ConflictError, NotFoundError
 from app.enums.file_category import FileCategory
 from app.models.file import File
 from app.repositories.file_repository import FileRepository
-from app.schemas.file import FileResponse
+from app.schemas.file import (
+    ConfirmRequest,
+    FileResponse,
+    PresignRequest,
+    PresignResponse,
+)
 from app.storage.base import StorageProvider
 
 _UNSAFE_FILENAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
@@ -100,6 +105,77 @@ class FileService:
             await self.storage.delete(object_key=object_key)
             raise
 
+        return self._to_response(file_record)
+
+    async def create_presign(self, data: PresignRequest) -> PresignResponse:
+        file_id = uuid.uuid4()
+        sanitized_filename = self.sanitize_filename(data.filename)
+        object_key = self._build_object_key(
+            category=data.category,
+            file_id=file_id,
+            sanitized_filename=sanitized_filename,
+        )
+        expires_in = self.settings.storage_presign_expire_seconds
+        upload_url = await self.storage.create_presigned_put_url(
+            object_key=object_key,
+            content_type=data.content_type,
+            expires_in=expires_in,
+        )
+        return PresignResponse(
+            file_id=file_id,
+            object_key=object_key,
+            upload_url=upload_url,
+            public_url=self.storage.build_public_url(object_key),
+            expires_in=expires_in,
+            headers={"Content-Type": data.content_type},
+        )
+
+    async def confirm_upload(self, data: ConfirmRequest) -> FileResponse:
+        existing_by_id = await self.repository.get_by_id(data.file_id)
+        if existing_by_id is not None:
+            raise ConflictError(f"File '{data.file_id}' already exists")
+
+        existing_by_key = await self.repository.get_by_object_key(data.object_key)
+        if existing_by_key is not None:
+            raise ConflictError(f"Object key '{data.object_key}' already registered")
+
+        expected_prefix = f"{data.category.value}/"
+        if not data.object_key.startswith(expected_prefix):
+            raise AppException(
+                "object_key does not match the given category",
+                status_code=400,
+            )
+        if not data.object_key.startswith(f"{data.category.value}/{data.file_id}_"):
+            raise AppException(
+                "object_key does not match the given file_id",
+                status_code=400,
+            )
+
+        head = await self.storage.head_object(object_key=data.object_key)
+        if head is None:
+            raise NotFoundError(
+                f"Object '{data.object_key}' not found in storage; upload first",
+            )
+        if head.size <= 0:
+            raise AppException("Uploaded object is empty", status_code=400)
+        if head.size > self.settings.storage_max_upload_bytes:
+            raise AppException(
+                f"File exceeds max upload size of "
+                f"{self.settings.storage_max_upload_bytes} bytes",
+                status_code=413,
+            )
+
+        file_record = await self.repository.create(
+            file_id=data.file_id,
+            object_key=data.object_key,
+            bucket=self.settings.storage_bucket,
+            original_filename=data.original_filename[:255],
+            content_type=data.content_type[:128],
+            size=head.size,
+            category=data.category.value,
+            url=self.storage.build_public_url(data.object_key),
+            etag=head.etag,
+        )
         return self._to_response(file_record)
 
     async def get_by_id(self, file_id: uuid.UUID) -> FileResponse:
