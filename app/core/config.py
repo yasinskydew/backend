@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     )
 
     app_name: str = Field(default="Yee-Daa API", alias="APP_NAME")
+    project_name: str = Field(default="Yee-Daa API", alias="PROJECT_NAME")
+    api_v1_prefix: str = Field(default="/api/v1", alias="API_V1_PREFIX")
+    api_version: str = Field(default="0.1.0", alias="API_VERSION")
     debug: bool = Field(default=False, alias="DEBUG")
     database_url: str = Field(
         default="postgresql+asyncpg://user:password@localhost:5432/project_db",
